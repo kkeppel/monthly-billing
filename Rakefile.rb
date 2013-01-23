@@ -1,12 +1,8 @@
 #!/usr/bin/env rake
-# Add your own tasks in files placed in lib/tasks ending in .rake,
-# for example lib/tasks/capistrano.rake, and they will automatically be available to Rake.
 
 require "stripe"
 require "csv"
 Stripe.api_key = "sk_test_fE9ubfh6kYb2wcNUJsO7X7EF"
-
-
 
 existing_customers_count = 0
 added_customers_count = 0
@@ -28,14 +24,14 @@ task :import_from_csv do
 			existing_customers_count += 1
 		else
 			Stripe::Customer.create({
-				                        :description => row[0],
-				                        :card => {
-					                        :number => row[1],
-					                        :exp_month => exp_month,
-					                        :exp_year => exp_year,
-					                        :name => row[3]
-				                        }
-			                        })
+        :description => row[0],
+        :card => {
+          :number => row[1],
+          :exp_month => exp_month,
+          :exp_year => exp_year,
+          :name => row[3]
+        }
+      })
 			added_customers_count += 1
 		end
 	end
