@@ -16,12 +16,12 @@ task :import_from_csv do
 	file = File.read('cards.csv')
 	csv = CSV.parse(file, :headers => true)
 
+	customers = Stripe::Customer.all
 
 	csv.each do |row|
 		exp_month = row[2][0..1]
 		exp_year = row[2][2..3]
 		description = row[0]
-		customers = Stripe::Customer.all
 		descriptions = customers.collect{|c| c.description}
 
 		if descriptions.include?(description)
