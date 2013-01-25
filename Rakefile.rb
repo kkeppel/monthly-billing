@@ -11,19 +11,25 @@ desc "Import CSV credit card information in Stripe"
 task :import_from_csv do
 	file = File.read('credit_card_payments_workbook.csv')
 	csv = CSV.parse(file, :headers => true)
-
-	customers = Stripe::Customer.all
-
+	customers=[]
+	count=100
+	offset=0
+	until count<100
+		stripe_request = Stripe::Customer.all(count: count,offset: offset)
+		customers.concat stripe_request.data
+		count = stripe_request.data.count
+		offset+=count
+	end
 	csv.each do |row|
 		begin
 			exp_month = row[18][0..1]
 			exp_year = row[18][2..3]
 			customer_name = row[1] ? row[1] : row[2]
 			description = row[0] + "-" + customer_name + "-" + row[3]
-			if customer = customers[:data].find{|customer| customer[:description]==description}
+			if customer = customers.find{|customer| customer[:description]==description}
 				existing_customers_count += 1
 			else
-				customer = Stripe::Customer.create({
+			 customer = Stripe::Customer.create({
 	         :description => description,
 	         :card => {
 	           :number => row[19],
