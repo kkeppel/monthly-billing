@@ -34,18 +34,54 @@ task :import_from_csv do
 	         }
 	       })
 				added_customers_count += 1
+
+				company_name = customer[:description].split("-")[0]
+				user_name = customer[:description].split("-")[1]
+				card_type = customer[:description].split("-")[2]
+				last4 = customer[:active_card][:last4]
+				CSV.open("stripe_customers.csv", "ab") do |a|
+					a << [company_name, user_name, card_type, last4, customer[:id]]
+				end
 			end
 			p customer[:id]
-		rescue
+		rescue Stripe::CardError => e
+			# Since it's a decline, Stripe::CardError will be caught
 			p "failed on #{row}"
-		end
-
-		company_name = customer[:description].split("-")[0]
-		user_name = customer[:description].split("-")[1]
-		card_type = customer[:description].split("-")[2]
-		last4 = customer[:active_card][:last4]
-		CSV.open("stripe_customers.csv", "ab") do |a|
-			a << [company_name, user_name, card_type, last4, new_customer[:id]]
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::InvalidRequestError => e
+			# Invalid parameters were supplied to Stripe's API
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::AuthenticationError => e
+			# Authentication with Stripe's API failed
+			# (maybe you changed API keys recently)
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::APIConnectionError => e
+			# Network communication with Stripe failed
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::StripeError => e
+			# Display a very generic error to the user, and maybe send
+			# yourself an email
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue => e
+			# Something else happened, completely unrelated to Stripe
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
 		end
 
 	end
