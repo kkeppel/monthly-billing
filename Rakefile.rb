@@ -8,6 +8,30 @@ existing_customers_count = 0
 added_customers_count = 0
 desc "Import CSV credit card information in Stripe"
 
+task :remove_all_customers do
+	all_removed_customers = 0
+	customers=[]
+	count=100
+	offset=0
+	until count<100
+		stripe_request = Stripe::Customer.all(count: count,offset: offset)
+		customers.concat stripe_request.data
+		count = stripe_request.data.count
+		offset+=count
+	end
+	customers.each do |c|
+		customer = Stripe::Customer.retrieve(c.id)
+		customer.delete
+		all_removed_customers += 1
+		puts "Removed customer #{c.id}"
+	end
+
+	File.delete('stripe_customers.csv')
+	CSV.open("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id"]}
+	puts "Removed #{all_removed_customers} total customers. Peace out guys."
+
+end
+
 task :import_from_csv do
 	file = File.read('credit_card_payments_workbook.csv')
 	csv = CSV.parse(file, :headers => true)
@@ -82,12 +106,9 @@ task :import_from_csv do
 			body = e.json_body
 			err  = body[:error]
 			puts "Message is: #{err[:message]}"
-		rescue => e
+		rescue
 			# Something else happened, completely unrelated to Stripe
 			p "failed on #{row}"
-			body = e.json_body
-			err  = body[:error]
-			puts "Message is: #{err[:message]}"
 		end
 
 	end
