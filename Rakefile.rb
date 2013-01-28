@@ -124,3 +124,50 @@ task :charge_customer, :customer_id, :amount do |t, args|
 		:customer => args[:customer_id]
 	)
 end
+
+task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc do |t, args|
+	puts "\norder_id: #{args[:order_id]}\nNumber: #{args[:number]}\nExp Month: #{args[:exp_month]}\nExp Year: #{args[:exp_year]}\nName: #{args[:name]}\nCVS: #{args[:cvc]}"
+
+	customers=[]
+	count=100
+	offset=0
+	until count<100
+		stripe_request = Stripe::Customer.all(count: count,offset: offset)
+		customers.concat stripe_request.data
+		count = stripe_request.data.count
+		offset+=count
+	end
+	begin
+		if customer = customers.find{|customer| customer[:description]==args[:order_id]}
+			puts "This customer already exists in Stripe."
+		else
+			customer = Stripe::Customer.create({
+			   :description => args[:order_id],
+			   :card => {
+			     :number => args[:number],
+			     :exp_month => args[:exp_month],
+			     :exp_year => args[:exp_year],
+			     :name => args[:name],
+			     :cvc => args[:cvc]
+			   }
+			 })
+			# add new customer to stripe_customers.csv
+			company_name = customer[:description].split("-")[0]
+			user_name = customer[:description].split("-")[1]
+			card_type = customer[:description].split("-")[2]
+			last4 = customer[:active_card][:last4]
+			CSV.open("stripe_customers.csv", "ab") do |a|
+				a << [company_name, user_name, card_type, last4, customer[:id]]
+			end
+			puts "Added customer #{customer[:description]}"
+		end
+	rescue Stripe::StripeError => e
+		# Display a very generic error to the user, and maybe send
+		# yourself an email
+		p "failed on #{row}"
+		body = e.json_body
+		err  = body[:error]
+		puts "Message is: #{err[:message]}"
+	end
+
+end
