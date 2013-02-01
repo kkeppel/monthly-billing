@@ -47,7 +47,7 @@ task :import_from_csv do
 			exp_month = row[18][0..1]
 			exp_year = row[18][2..3]
 			customer_name = row[1] ? row[1] : row[2]
-			description = row[0] + "-" + customer_name + "-" + row[3]
+			description = row[0] + "-" + customer_name + "-" + row[4].split("-").last
 			if customer = customers.find{|customer| customer[:description]==description}
 				existing_customers_count += 1
 			else

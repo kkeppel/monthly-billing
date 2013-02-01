@@ -26,9 +26,9 @@ describe "Rake tasks" do
 			File.delete('stripe_customers.csv')
 		end
 		it "should create a new csv for stripe customer ids with headers" do
-			let(:result) {}
-			CSV.stub(:open).with("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id"]}
-			csv.should include(["Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id"])
+			CSV.should_receive(:open).with("stripe_customers.csv", "wb")
+			CSV.open("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id"]}
+			File.read("stripe_customers.csv").should include("Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id")
 		end
 
 	end
