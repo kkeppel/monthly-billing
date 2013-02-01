@@ -1,5 +1,3 @@
-#!/usr/bin/env rake
-
 require "stripe"
 require "csv"
 Stripe.api_key = "sk_test_fE9ubfh6kYb2wcNUJsO7X7EF"
@@ -53,16 +51,16 @@ task :import_from_csv do
 			if customer = customers.find{|customer| customer[:description]==description}
 				existing_customers_count += 1
 			else
-			 customer = Stripe::Customer.create({
-	         :description => description,
-	         :card => {
-	           :number => row[19],
-	           :exp_month => exp_month,
-	           :exp_year => exp_year,
-	           :name => row[2],
-	           :cvc => row[7]
-	         }
-	       })
+				customer = Stripe::Customer.create({
+				 :description => description,
+				 :card => {
+				   :number => row[19],
+				   :exp_month => exp_month,
+				   :exp_year => exp_year,
+				   :name => row[2],
+				   :cvc => row[7]
+				 }
+				})
 				added_customers_count += 1
 
 				company_name = customer[:description].split("-")[0]
@@ -142,15 +140,15 @@ task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc do |t
 			puts "This customer already exists in Stripe."
 		else
 			customer = Stripe::Customer.create({
-			   :description => args[:order_id],
-			   :card => {
-			     :number => args[:number],
-			     :exp_month => args[:exp_month],
-			     :exp_year => args[:exp_year],
-			     :name => args[:name],
-			     :cvc => args[:cvc]
-			   }
-			 })
+				                                   :description => args[:order_id],
+				                                   :card => {
+					                                   :number => args[:number],
+					                                   :exp_month => args[:exp_month],
+					                                   :exp_year => args[:exp_year],
+					                                   :name => args[:name],
+					                                   :cvc => args[:cvc]
+				                                   }
+			                                   })
 			# add new customer to stripe_customers.csv
 			company_name = customer[:description].split("-")[0]
 			user_name = customer[:description].split("-")[1]
