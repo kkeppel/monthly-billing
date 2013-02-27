@@ -8,7 +8,6 @@ describe "Rake tasks" do
 		Stripe.api_key = "sk_test_fE9ubfh6kYb2wcNUJsO7X7EF"
 		@rake = Rake::Application.new
 		Rake.application = @rake
-		#Rake.application.rake_require "./Rakefile.rb"
 		@rake.init
 		@rake.load_rakefile
 	end
@@ -27,8 +26,8 @@ describe "Rake tasks" do
 		end
 		it "should create a new csv for stripe customer ids with headers" do
 			CSV.should_receive(:open).with("stripe_customers.csv", "wb")
-			CSV.open("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id"]}
-			File.read("stripe_customers.csv").should include("Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id")
+			CSV.open("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "order_id", "stripe_id"]}
+			File.read("stripe_customers.csv").should include("Company Name", "User Name", "Card Type", "Last 4 Digits", "order_id", "stripe_id")
 		end
 
 	end
@@ -42,32 +41,26 @@ describe "Rake tasks" do
 			@customers = Stripe::Customer.all(count: 100, offset: 0)
 		end
 		it "should load csv of customer information" do
-			File.should_receive(:read).with("credit_card_payments_workbook.csv")
-			@file = File.read("credit_card_payments_workbook.csv")
+			File.should_receive(:read).with("test_data.csv")
+			@file = File.read("test_data.csv")
 		end
 		it "should parse csv of customer information" do
 			CSV.should_receive(:parse).with(@file, :headers => true).and_return([
-				{"CompanyName" => "33Across", "ClientContactName" => "Jennifer Wong", "Name on Card" => "Corey McIntrye",
-				"CardType" => "American Express", "CardNumber" => "8870-9077-2852-5338", "ExpirationMonth" => "Feb",
-				"ExpirationYear" => "2017", "CardID" => "9182", "Frequency" => "Monthly", "Current?" => "Yes",
-				"Hold only?" => "No", "For Single Order?" => "", "Notes" => "", "Chase Payment profile #" => "", "" => "",
-				"" => "", "" => "", "2-digit year" => "17", "Expiration Date Clear" => "0217", "CC# clean" => "378282246310005",
-				"" => "", "length check" => "16"},
-			  {"CompanyName" => "3LM", "ClientContactName" => "Erica Call", "Name on Card" => "Gaurav Mathur",
-			   "CardType" => "American Express", "CardNumber" => "8785-9274-7351-3835", "ExpirationMonth" => "Dec",
-			   "ExpirationYear" => "2014", "CardID" => "4195", "Frequency" => "Monthly", "Current?" => "Yes",
-			   "Hold only?" => "No", "For Single Order?" => "", "Notes" => "", "Chase Payment profile #" => "27863319",
-			   "" => "", "" => "", "" => "", "2-digit year" => "14", "Expiration Date Clear" => "1214",
-			   "CC# clean" => "378282246310005", "" => "", "length check" => "16"}
+				{"CompanyName" => "33Across", "ClientContactName" => "Jennifer Wong", "NameOnCard" => "Corey McIntrye",
+				"CardType" => "American Express", "CardID" => "9182", "ExpirationDateClean" => "0217",
+				"CardNumberClean" => "378282246310005", "CompanyID" => "176", "ContactID" => "205", "City" => "NYC" },
+			  {"CompanyName" => "3LM", "ClientContactName" => "Erica Call", "NameOnCard" => "Gaurav Mathur",
+			  "CardType" => "American Express", "CardID" => "4195", "ExpirationDateClean" => "1214",
+			  "CardNumberClean" => "378282246310005", "CompanyID" => "384", "ContactID" => "608", "City" => "SF"}
 			])
 			csv = CSV.parse(@file, :headers => true)
 			csv.each do |row|
-				card = row["CC# clean"]
-				exp_month = row["Expiration Date Clear"][0..1]
-				exp_year = row["Expiration Date Clear"][2..3]
-				name = row["Name on Card"]
+				card = row["CardNumberClean"]
+				exp_month = row["ExpirationDateClean"][0..1]
+				exp_year = row["ExpirationDateClean"][2..3]
+				name = row["NameOnCard"]
 				cvc = row["CardID"]
-				description = row["CompanyName"] + "-" + row["ClientContactName"] + "-" + row["CardType"]
+				description = row["CompanyID"] + "-" + row["ContactID"] + "-" + card.to_s[-4,4] +"-" + row["City"]
 				card.should_not be_nil
 				exp_month.should_not be_nil
 				exp_year.should_not be_nil

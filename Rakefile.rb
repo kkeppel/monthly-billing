@@ -25,13 +25,13 @@ task :remove_all_customers do
 	end
 
 	File.delete('stripe_customers.csv')
-	CSV.open("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "stripe_id"]}
+	CSV.open("stripe_customers.csv", "wb") { |csv| csv << ["Company Name", "User Name", "Card Type", "Last 4 Digits", "order_id", "stripe_id"]}
 	puts "Removed #{all_removed_customers} total customers. Peace out guys."
 
 end
 
 task :import_from_csv do
-	file = File.read('credit_card_payments_workbook.csv')
+	file = File.read('cc_import_workbook_AL.csv')
 	csv = CSV.parse(file, :headers => true)
 	customers=[]
 	count=100
@@ -44,31 +44,32 @@ task :import_from_csv do
 	end
 	csv.each do |row|
 		begin
-			exp_month = row[18][0..1]
-			exp_year = row[18][2..3]
+			exp_month = row[5][0..1]
+			exp_year = row[5][2..3]
 			customer_name = row[1] ? row[1] : row[2]
-			description = row[0] + "-" + customer_name + "-" + row[4].split("-").last
+			description = row[7] + "-" + row[8] + "-" + row[6].to_s[-4,4] + "-" + row[9]
 			if customer = customers.find{|customer| customer[:description]==description}
 				existing_customers_count += 1
 			else
 				customer = Stripe::Customer.create({
 				 :description => description,
 				 :card => {
-				   :number => row[19],
+				   :number => row[6],
 				   :exp_month => exp_month,
 				   :exp_year => exp_year,
 				   :name => row[2],
-				   :cvc => row[7]
+				   :cvc => row[4]
 				 }
 				})
 				added_customers_count += 1
 
-				company_name = customer[:description].split("-")[0]
-				user_name = customer[:description].split("-")[1]
-				card_type = customer[:description].split("-")[2]
+				company_name = row[0]
+				user_name = customer_name
+				card_type = row[3]
 				last4 = customer[:active_card][:last4]
+				order_id = customer[:description]
 				CSV.open("stripe_customers.csv", "ab") do |a|
-					a << [company_name, user_name, card_type, last4, customer[:id]]
+					a << [company_name, user_name, card_type, last4, order_id, customer[:id]]
 				end
 			end
 			p customer[:id]
@@ -123,8 +124,8 @@ task :charge_customer, :customer_id, :amount do |t, args|
 	)
 end
 
-task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc do |t, args|
-	puts "\norder_id: #{args[:order_id]}\nNumber: #{args[:number]}\nExp Month: #{args[:exp_month]}\nExp Year: #{args[:exp_year]}\nName: #{args[:name]}\nCVS: #{args[:cvc]}"
+task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc, :company_name, :card_type do |t, args|
+	puts "\norder_id: #{args[:order_id]}\nNumber: #{args[:number]}\nExp Month: #{args[:exp_month]}\nExp Year: #{args[:exp_year]}\nName: #{args[:name]}\nCVC: #{args[:cvc]}\nCompany Name: #{args[:company_name]}\nCard Type: #{args[:card_type]}"
 
 	customers=[]
 	count=100
@@ -150,12 +151,13 @@ task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc do |t
 				                                   }
 			                                   })
 			# add new customer to stripe_customers.csv
-			company_name = customer[:description].split("-")[0]
-			user_name = customer[:description].split("-")[1]
-			card_type = customer[:description].split("-")[2]
+			company_name = args[:company_name]
+			user_name = args[:name]
+			card_type = args[:card_type]
 			last4 = customer[:active_card][:last4]
+			order_id = customer[:description]
 			CSV.open("stripe_customers.csv", "ab") do |a|
-				a << [company_name, user_name, card_type, last4, customer[:id]]
+				a << [company_name, user_name, card_type, last4, order_id, customer[:id]]
 			end
 			puts "Added customer #{customer[:description]}"
 		end
