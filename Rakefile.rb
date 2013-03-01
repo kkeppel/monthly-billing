@@ -1,6 +1,11 @@
 require "stripe"
 require "csv"
-Stripe.api_key = "sk_test_fE9ubfh6kYb2wcNUJsO7X7EF"
+require "yaml"
+
+$LOAD_PATH << File.dirname(__FILE__)
+APP_CONFIG = YAML::load_file("config.yml")
+
+Stripe.api_key = APP_CONFIG["live_api_key"]
 
 existing_customers_count = 0
 added_customers_count = 0
