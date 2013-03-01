@@ -1,2 +1,4 @@
 test_api_key: get_from_admin
 live_api_key: get_from_admin
+
+# PLEASE CREATE THE FILE stripe_customers.csv with the header: Company Name,User Name,Card Type,Last 4 Digits,order_id,stripe_id

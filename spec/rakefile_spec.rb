@@ -2,10 +2,12 @@ require 'rake'
 require 'spec_helper'
 require "stripe"
 require "csv"
+require "yaml"
 
 describe "Rake tasks" do
 	before do
-		Stripe.api_key = "sk_test_fE9ubfh6kYb2wcNUJsO7X7EF"
+		APP_CONFIG = YAML::load_file("config.yml")
+		Stripe.api_key = APP_CONFIG["live_api_key"]
 		@rake = Rake::Application.new
 		Rake.application = @rake
 		@rake.init
