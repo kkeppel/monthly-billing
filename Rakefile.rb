@@ -150,11 +150,22 @@ end
 task :charge_customer, :customer_id, :amount do |t, args|
 	puts "Args were: #{args}\nCustomer_id = #{args[:customer_id]}\nAmount = #{args[:amount]}"
 
-	Stripe::Charge.create(
+	charge = Stripe::Charge.create(
 		:amount => args[:amount],
 		:currency => "usd",
 		:customer => args[:customer_id]
 	)
+
+	customer_id = args[:customer_id]
+	amount = args[:amount]
+	charge_id = charge[:id]
+	paid = charge[:paid]
+	refunded = charge[:refunded]
+	created_at = charge[:created]
+
+	CSV.open("successful_charges.csv", "ab") do |a|
+		a << [customer_id, amount, charge_id, paid, refunded, created_at]
+	end
 end
 
 ### -----------------------------------
@@ -245,6 +256,24 @@ task :refund_charges do
 	end
 
 	puts "Refunded #{refunds} customer#{"s" if refunds != 1}!"	
+end
+
+task :refund_charge, :charge_id do |t, args|
+	puts "Args were: #{args}\charge_id = #{args[:charge_id]}"
+
+	charge = Stripe::Charge.retrieve(args[:charge_id])
+	charge.refund
+
+	customer_id = charge[:customer]
+	amount = charge[:amount]
+	charge_id = args[:charge_id]
+	paid = charge[:paid]
+	refunded = charge[:refunded]
+	created_at = charge[:created]
+
+	CSV.open("successful_charges.csv", "ab") do |a|
+		a << [customer_id, amount, charge_id, paid, refunded, created_at]
+	end
 end
 
 ### -----------------------------------
