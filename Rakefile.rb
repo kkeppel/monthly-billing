@@ -26,7 +26,7 @@ task :remove_all_customers do
 		customer = Stripe::Customer.retrieve(c.id)
 		customer.delete
 		all_removed_customers += 1
-		puts "Removed customer #{c.id}"
+		puts "Removed customer #{c.description}"
 	end
 
 	File.delete('stripe_customers.csv')
@@ -52,7 +52,10 @@ task :import_from_csv do
 			exp_month = row[5][0..1]
 			exp_year = row[5][2..3]
 			customer_name = row[1] ? row[1] : row[2]
-			description = row[7] + "-" + row[8] + "-" + row[6].to_s[-4,4] + "-" + row[9]
+			# For description = company_name-customer_name-city-last4
+			description = row[0] + "-" + customer_name + "-" + row[9] + "-" + row[6].to_s[-4,4]
+			# For description = company_id-contact_id-last4-city
+			# description = row[7] + "-" + row[8] + "-" + row[6].to_s[-4,4] + "-" + row[9]
 			if customer = customers.find{|customer| customer[:description]==description}
 				existing_customers_count += 1
 			else
@@ -77,7 +80,7 @@ task :import_from_csv do
 					a << [company_name, user_name, card_type, last4, order_id, customer[:id]]
 				end
 			end
-			p customer[:id]
+			p customer[:description]
 		rescue Stripe::CardError => e
 			# Since it's a decline, Stripe::CardError will be caught
 			p "failed on #{row}"
@@ -129,8 +132,134 @@ task :charge_customer, :customer_id, :amount do |t, args|
 	)
 end
 
-task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc, :company_name, :card_type do |t, args|
-	puts "\norder_id: #{args[:order_id]}\nNumber: #{args[:number]}\nExp Month: #{args[:exp_month]}\nExp Year: #{args[:exp_year]}\nName: #{args[:name]}\nCVC: #{args[:cvc]}\nCompany Name: #{args[:company_name]}\nCard Type: #{args[:card_type]}"
+task :charge_customers do
+	file = File.read('charges.csv')
+	csv = CSV.parse(file, :headers => true)
+  charges = 0
+
+	csv.each do |row|
+		begin
+			charge = Stripe::Charge.create(
+				:customer => row[0],
+				:amount => row[1],
+				:currency => "usd"
+			)
+
+			customer_id = row[0]
+			amount = row[1]
+			charge_id = charge[:id]
+			paid = charge[:paid]
+			refunded = charge[:refunded]
+			created_at = charge[:created]
+
+			CSV.open("successful_charges.csv", "ab") do |a|
+				a << [customer_id, amount, charge_id, paid, refunded, created_at]
+			end
+
+			charges += 1
+
+			puts "charged customer #{row[0]} #{amount}"
+		rescue Stripe::CardError => e
+			# Since it's a decline, Stripe::CardError will be caught
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::InvalidRequestError => e
+			# Invalid parameters were supplied to Stripe's API
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::AuthenticationError => e
+			# Authentication with Stripe's API failed
+			# (maybe you changed API keys recently)
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::APIConnectionError => e
+			# Network communication with Stripe failed
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::StripeError => e
+			# Display a very generic error to the user, and maybe send
+			# yourself an email
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue
+			# Something else happened, completely unrelated to Stripe
+			p "failed on #{row}"
+		end
+	end
+
+	puts "Charged #{charges} customer#{"s" if charges != 1}!"
+end
+
+task :refund_charges do
+	file = File.read('refund_charges.csv')
+	csv = CSV.parse(file, :headers => true)
+  refunds = 0
+
+	csv.each do |row|
+		begin
+			charge = Stripe::Charge.refund(row[0], row[1]) 
+
+			edit_file = File.read('charges.csv')
+			edit_csv = CSV.parse(edit_file, :headers => true)
+			edit_csv.each do |edit_row|
+
+			end
+			charges += 1
+
+			puts "charged customer #{row[0]} #{amount}"
+		rescue Stripe::CardError => e
+			# Since it's a decline, Stripe::CardError will be caught
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::InvalidRequestError => e
+			# Invalid parameters were supplied to Stripe's API
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::AuthenticationError => e
+			# Authentication with Stripe's API failed
+			# (maybe you changed API keys recently)
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::APIConnectionError => e
+			# Network communication with Stripe failed
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue Stripe::StripeError => e
+			# Display a very generic error to the user, and maybe send
+			# yourself an email
+			p "failed on #{row}"
+			body = e.json_body
+			err  = body[:error]
+			puts "Message is: #{err[:message]}"
+		rescue
+			# Something else happened, completely unrelated to Stripe
+			p "failed on #{row}"
+		end
+	end
+
+	puts "Charged #{charges} customer#{"s" if charges != 1}!"	
+end
+
+task :add_customer, :number, :exp_month, :exp_year, :name, :cvc, :company_name, :card_type, :city do |t, args|
+	puts "\ncity: #{args[:city]}\nNumber: #{args[:number]}\nExp Month: #{args[:exp_month]}\nExp Year: #{args[:exp_year]}\nName: #{args[:name]}\nCVC: #{args[:cvc]}\nCompany Name: #{args[:company_name]}\nCard Type: #{args[:card_type]}"
 
 	customers=[]
 	count=100
@@ -142,19 +271,20 @@ task :add_customer, :order_id, :number, :exp_month, :exp_year, :name, :cvc, :com
 		offset+=count
 	end
 	begin
-		if customer = customers.find{|customer| customer[:description]==args[:order_id]}
+		description = args[:company_name] + "-" + args[:name] + "-" + args[:city] + "-" + args[:number].to_s[-4,4] 
+		if customer = customers.find{|customer| customer[:description]==description}
 			puts "This customer already exists in Stripe."
 		else
 			customer = Stripe::Customer.create({
-				                                   :description => args[:order_id],
-				                                   :card => {
-					                                   :number => args[:number],
-					                                   :exp_month => args[:exp_month],
-					                                   :exp_year => args[:exp_year],
-					                                   :name => args[:name],
-					                                   :cvc => args[:cvc]
-				                                   }
-			                                   })
+	       :description => description,
+	       :card => {
+	         :number => args[:number],
+	         :exp_month => args[:exp_month],
+	         :exp_year => args[:exp_year],
+	         :name => args[:name],
+	         :cvc => args[:cvc]
+	       }
+	     })
 			# add new customer to stripe_customers.csv
 			company_name = args[:company_name]
 			user_name = args[:name]
