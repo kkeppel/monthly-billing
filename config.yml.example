@@ -1,4 +1,8 @@
 test_api_key: get_from_admin
 live_api_key: get_from_admin
 
-# PLEASE CREATE THE FILE stripe_customers.csv with the header: Company Name,User Name,Card Type,Last 4 Digits,order_id,stripe_id
+# PLEASE CREATE THESE FILES:
+## stripe_customers.csv, header = Company Name,User Name,Card Type,Last 4 Digits,order_id,stripe_id
+## successful_charges.csv, header = CustomerID,Amount,ChargeID,Paid,Refunded,CreatedAt
+## refund_charges.csv, header = ChargeID,Amount
+## charges.csv, header = CustomerID,Amount
