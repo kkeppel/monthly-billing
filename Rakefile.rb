@@ -266,7 +266,7 @@ task :add_customer, :number, :exp_month, :exp_year, :name, :cvc, :company_name, 
 			puts "Added customer #{customer[:description]}"
 		end
 	rescue Stripe::CardError => e
-			card_error(e, row)
+		card_error(e, row)
 	rescue Stripe::InvalidRequestError => e
 		invalid_request_error(e, row)
 	rescue Stripe::AuthenticationError => e
