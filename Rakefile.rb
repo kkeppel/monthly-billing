@@ -49,6 +49,8 @@ def create_customer(description, number, exp_month, exp_year, name, cvc)
 	})
 end
 
+### -----------------------------------
+
 def charge_customer(customer, amount)
 	Stripe::Charge.create(:customer => customer, :amount => amount, :currency => "usd")
 end
@@ -72,8 +74,7 @@ def invalid_request_error(e, row)
 end
 
 def authentication_error(e, row)
-	# Authentication with Stripe's API failed
-	# (maybe you changed API keys recently)
+	# Authentication with Stripe's API failed (maybe you changed API keys recently)
 	p "failed on #{row}"
 	body = e.json_body
 	err  = body[:error]
@@ -89,8 +90,7 @@ def api_connection_error(e, row)
 end
 
 def stripe_error(e, row)
-	# Display a very generic error to the user, and maybe send
-	# yourself an email
+	# Display a very generic error to the user, and maybe send yourself an email
 	p "failed on #{row}"
 	body = e.json_body
 	err  = body[:error]
